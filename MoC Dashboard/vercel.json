@@ -1,5 +1,6 @@
 {
-  "buildCommand": "next build",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm build",
   "crons": [
     {
       "path": "/api/cron",
