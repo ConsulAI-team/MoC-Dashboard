@@ -1,0 +1,7 @@
+.git
+.gitignore
+README.md
+.next
+node_modules
+pnpm-lock.yaml
+.oryx
