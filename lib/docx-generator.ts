@@ -78,24 +78,24 @@ function subSectionHeader(text: string, color = COLORS.black): Paragraph {
   })
 }
 
-function headlineBullet(text: string): Paragraph {
+function headlineBullet(text: string, color = COLORS.black): Paragraph {
   return new Paragraph({
     children: [
-      new TextRun({ text: `• ${text}`, font: FONTS.body, size: SIZES.body, color: COLORS.black }),
+      new TextRun({ text: `• ${text}`, font: FONTS.body, size: SIZES.body, color }),
     ],
     indent: { left: convertInchesToTwip(0.25) },
     spacing: { after: SPACING.afterBullet },
   })
 }
 
-function articleBullet(article: Article): Paragraph[] {
+function articleBullet(article: Article, textColor = COLORS.black): Paragraph[] {
   const text = article.Snippet || article.Title
   const children: (TextRun | ExternalHyperlink)[] = [
-    new TextRun({ text: `• ${text}`, font: FONTS.body, size: SIZES.body, color: COLORS.black }),
+    new TextRun({ text: `• ${text}`, font: FONTS.body, size: SIZES.body, color: textColor }),
   ]
 
   if (article.Outlet) {
-    children.push(new TextRun({ text: " (", font: FONTS.body, size: SIZES.body, color: COLORS.black }))
+    children.push(new TextRun({ text: " (", font: FONTS.body, size: SIZES.body, color: textColor }))
     if (article.Link) {
       children.push(
         new ExternalHyperlink({
@@ -116,7 +116,7 @@ function articleBullet(article: Article): Paragraph[] {
         new TextRun({ text: article.Outlet, font: FONTS.body, size: SIZES.body, color: COLORS.linkBlue, italics: true })
       )
     }
-    children.push(new TextRun({ text: ")", font: FONTS.body, size: SIZES.body, color: COLORS.black }))
+    children.push(new TextRun({ text: ")", font: FONTS.body, size: SIZES.body, color: textColor }))
   }
 
   return [
@@ -201,8 +201,8 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
   const negArticles = data.negativeArticles ?? []
   const negHeadlines: string[] = data.headlines?.negative ?? negArticles.map((a) => a.Title)
   if (negHeadlines.length > 0) {
-    out.push(sectionHeader("Negative Articles", COLORS.red))
-    negHeadlines.slice(0, 12).forEach((h) => out.push(headlineBullet(h)))
+    out.push(sectionHeader("Negative Articles"))
+    negHeadlines.slice(0, 12).forEach((h) => out.push(headlineBullet(h, COLORS.red)))
   }
 
   const globalHeadlines: string[] = data.headlines?.global ?? collectTitles(data.global)
@@ -237,8 +237,8 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
 
   // ── NEGATIVE ARTICLES (DETAILED) ────────────────────────────────────────────
   if (negArticles.length > 0) {
-    out.push(sectionHeader("Negative Articles", COLORS.red))
-    negArticles.forEach((a) => out.push(...articleBullet(a)))
+    out.push(sectionHeader("Negative Articles"))
+    negArticles.forEach((a) => out.push(...articleBullet(a, COLORS.red)))
   }
 
   // ── GLOBAL (DETAILED) ───────────────────────────────────────────────────────
