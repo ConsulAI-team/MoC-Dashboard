@@ -31,7 +31,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { ExportDocxButton } from "@/components/export-docx-button"
-import type { DigestData, Article, SearchConfig } from "@/lib/types"
+import type { DigestData, Article, RiskOpportunity, SearchConfig } from "@/lib/types"
 import { buildSerperSearchBatches, buildDynamicDigestPrompt, loadConfig, loadDigestData, saveDigestData } from "@/lib/config-store"
 
 function getSentimentBadge(sentiment?: string) {
@@ -581,7 +581,7 @@ export function DigestDashboard() {
   }
 
   // Derive display data: apply excluded-sources / excluded-terms filters from config
-  const displayData = useMemo(
+  const displayData = useMemo<DigestData | null>(
     () => (data && config ? applyConfigFilters(data, config) : data),
     [data, config]
   )
@@ -589,10 +589,10 @@ export function DigestDashboard() {
   // Calculate stats
   const saudiCount = displayData?.saudiRegional
     ? [
-        visibleSections.saudiGeneral ? data.saudiRegional.general : [],
-        visibleSections.museums ? data.saudiRegional.museums : [],
-        visibleSections.heritage ? data.saudiRegional.heritage : [],
-        visibleSections.visualArts ? data.saudiRegional.visualArts : [],
+        visibleSections.saudiGeneral ? displayData.saudiRegional.general : [],
+        visibleSections.museums ? displayData.saudiRegional.museums : [],
+        visibleSections.heritage ? displayData.saudiRegional.heritage : [],
+        visibleSections.visualArts ? displayData.saudiRegional.visualArts : [],
         visibleSections.film ? displayData.saudiRegional.film : [],
         visibleSections.music ? displayData.saudiRegional.music : [],
         visibleSections.fashion ? displayData.saudiRegional.fashion : [],
@@ -766,7 +766,7 @@ export function DigestDashboard() {
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
               {/* Saudi Arabia/Regional Section */}
-              {data?.saudiRegional && (
+              {displayData?.saudiRegional && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-[#0F2837]">
@@ -779,7 +779,7 @@ export function DigestDashboard() {
                       <CollapsibleSection
                         title="General"
                         icon={<Building className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.general || []}
+                        articles={displayData.saudiRegional.general || []}
                       />
                     )}
                     {visibleSections.museums && (
@@ -787,7 +787,7 @@ export function DigestDashboard() {
                         title="Museums"
                         arabicTitle="المتاحف"
                         icon={<Landmark className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.museums || []}
+                        articles={displayData.saudiRegional.museums || []}
                       />
                     )}
                     {visibleSections.heritage && (
@@ -795,7 +795,7 @@ export function DigestDashboard() {
                         title="Heritage"
                         arabicTitle="التراث"
                         icon={<Building2 className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.heritage || []}
+                        articles={displayData.saudiRegional.heritage || []}
                       />
                     )}
                     {visibleSections.visualArts && (
@@ -803,7 +803,7 @@ export function DigestDashboard() {
                         title="Visual Arts"
                         arabicTitle="الفنون البصرية"
                         icon={<Palette className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.visualArts || []}
+                        articles={displayData.saudiRegional.visualArts || []}
                       />
                     )}
                     {visibleSections.film && (
@@ -811,7 +811,7 @@ export function DigestDashboard() {
                         title="Film"
                         arabicTitle="الأفلام"
                         icon={<Film className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.film || []}
+                        articles={displayData.saudiRegional.film || []}
                       />
                     )}
                     {visibleSections.music && (
@@ -819,7 +819,7 @@ export function DigestDashboard() {
                         title="Music"
                         arabicTitle="الموسيقى"
                         icon={<Music className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.music || []}
+                        articles={displayData.saudiRegional.music || []}
                       />
                     )}
                     {visibleSections.fashion && (
@@ -827,7 +827,7 @@ export function DigestDashboard() {
                         title="Fashion"
                         arabicTitle="الأزياء"
                         icon={<Palette className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.fashion || []}
+                        articles={displayData.saudiRegional.fashion || []}
                       />
                     )}
                     {visibleSections.literature && (
@@ -835,7 +835,7 @@ export function DigestDashboard() {
                         title="Literature, Publishing and Translation"
                         arabicTitle="الأدب والنشر والترجمة"
                         icon={<BookOpen className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.literature || []}
+                        articles={displayData.saudiRegional.literature || []}
                       />
                     )}
                     {visibleSections.culinary && (
@@ -843,7 +843,7 @@ export function DigestDashboard() {
                         title="Culinary Arts"
                         arabicTitle="فنون الطهي"
                         icon={<UtensilsCrossed className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.culinary || []}
+                        articles={displayData.saudiRegional.culinary || []}
                       />
                     )}
                     {visibleSections.theater && (
@@ -851,7 +851,7 @@ export function DigestDashboard() {
                         title="Theater and Performing Arts"
                         arabicTitle="المسرح والفنون الأدائية"
                         icon={<Theater className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.theater || []}
+                        articles={displayData.saudiRegional.theater || []}
                       />
                     )}
                     {visibleSections.architecture && (
@@ -859,7 +859,7 @@ export function DigestDashboard() {
                         title="Architecture and Design"
                         arabicTitle="العمارة والتصميم"
                         icon={<Building2 className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.architecture || []}
+                        articles={displayData.saudiRegional.architecture || []}
                       />
                     )}
                     {visibleSections.libraries && (
@@ -867,7 +867,7 @@ export function DigestDashboard() {
                         title="Libraries"
                         arabicTitle="المكتبات"
                         icon={<BookOpen className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.saudiRegional.libraries || []}
+                        articles={displayData.saudiRegional.libraries || []}
                       />
                     )}
                     {saudiCount === 0 && (
@@ -888,8 +888,8 @@ export function DigestDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {data?.negativeArticles && data.negativeArticles.length > 0 ? (
-                    data.negativeArticles.map((article, index) => (
+                  {displayData?.negativeArticles && displayData.negativeArticles.length > 0 ? (
+                    (displayData.negativeArticles as Article[]).map((article, index) => (
                       <ArticleCard key={index} article={article} />
                     ))
                   ) : (
@@ -901,7 +901,7 @@ export function DigestDashboard() {
               </Card>
 
               {/* Global Section */}
-              {data?.global && (
+              {displayData?.global && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-[#0F2837]">
@@ -915,7 +915,7 @@ export function DigestDashboard() {
                         title="General"
                         arabicTitle="عام"
                         icon={<Building className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.general || []}
+                        articles={displayData.global.general || []}
                       />
                     )}
                     {visibleSections.museums && (
@@ -923,7 +923,7 @@ export function DigestDashboard() {
                         title="Museums"
                         arabicTitle="المتاحف"
                         icon={<Landmark className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.museums || []}
+                        articles={displayData.global.museums || []}
                       />
                     )}
                     {visibleSections.heritage && (
@@ -931,7 +931,7 @@ export function DigestDashboard() {
                         title="Heritage"
                         arabicTitle="التراث"
                         icon={<Building2 className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.heritage || []}
+                        articles={displayData.global.heritage || []}
                       />
                     )}
                     {visibleSections.visualArts && (
@@ -939,7 +939,7 @@ export function DigestDashboard() {
                         title="Visual Arts"
                         arabicTitle="الفنون البصرية"
                         icon={<Palette className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.visualArts || []}
+                        articles={displayData.global.visualArts || []}
                       />
                     )}
                     {visibleSections.film && (
@@ -947,7 +947,7 @@ export function DigestDashboard() {
                         title="Film"
                         arabicTitle="الأفلام"
                         icon={<Film className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.film || []}
+                        articles={displayData.global.film || []}
                       />
                     )}
                     {visibleSections.music && (
@@ -955,7 +955,7 @@ export function DigestDashboard() {
                         title="Music"
                         arabicTitle="الموسيقى"
                         icon={<Music className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.music || []}
+                        articles={displayData.global.music || []}
                       />
                     )}
                     {visibleSections.fashion && (
@@ -963,7 +963,7 @@ export function DigestDashboard() {
                         title="Fashion"
                         arabicTitle="الأزياء"
                         icon={<Palette className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.fashion || []}
+                        articles={displayData.global.fashion || []}
                       />
                     )}
                     {visibleSections.literature && (
@@ -971,7 +971,7 @@ export function DigestDashboard() {
                         title="Literature, Publishing and Translation"
                         arabicTitle="الأدب والنشر والترجمة"
                         icon={<BookOpen className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.literature || []}
+                        articles={displayData.global.literature || []}
                       />
                     )}
                     {visibleSections.culinary && (
@@ -979,7 +979,7 @@ export function DigestDashboard() {
                         title="Culinary Arts"
                         arabicTitle="فنون الطهي"
                         icon={<UtensilsCrossed className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.culinary || []}
+                        articles={displayData.global.culinary || []}
                       />
                     )}
                     {visibleSections.theater && (
@@ -987,7 +987,7 @@ export function DigestDashboard() {
                         title="Theater and Performing Arts"
                         arabicTitle="المسرح والفنون الأدائية"
                         icon={<Theater className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.theater || []}
+                        articles={displayData.global.theater || []}
                       />
                     )}
                     {visibleSections.architecture && (
@@ -995,7 +995,7 @@ export function DigestDashboard() {
                         title="Architecture and Design"
                         arabicTitle="العمارة والتصميم"
                         icon={<Building2 className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.architecture || []}
+                        articles={displayData.global.architecture || []}
                       />
                     )}
                     {visibleSections.libraries && (
@@ -1003,7 +1003,7 @@ export function DigestDashboard() {
                         title="Libraries"
                         arabicTitle="المكتبات"
                         icon={<BookOpen className="h-4 w-4 text-muted-foreground" />}
-                        articles={data.global.libraries || []}
+                        articles={displayData.global.libraries || []}
                       />
                     )}
                     {globalCount === 0 && (
@@ -1030,8 +1030,8 @@ export function DigestDashboard() {
                       <h4 className="font-semibold text-sm text-red-600 uppercase tracking-wide mb-3">
                         Risks
                       </h4>
-                      {data?.risksAndOpportunities?.risks && data.risksAndOpportunities.risks.length > 0 ? (
-                        data.risksAndOpportunities.risks.map((risk, index) => (
+                      {displayData?.risksAndOpportunities?.risks && displayData.risksAndOpportunities.risks.length > 0 ? (
+                        (displayData.risksAndOpportunities.risks as RiskOpportunity[]).map((risk, index) => (
                           <div key={index} className="mb-4">
                             <p className="text-sm text-foreground mb-2">
                               {risk.description}
@@ -1063,8 +1063,8 @@ export function DigestDashboard() {
                       <h4 className="font-semibold text-sm text-green-600 uppercase tracking-wide mb-3">
                         Opportunities
                       </h4>
-                      {data?.risksAndOpportunities?.opportunities && data.risksAndOpportunities.opportunities.length > 0 ? (
-                        data.risksAndOpportunities.opportunities.map((opp, index) => (
+                      {displayData?.risksAndOpportunities?.opportunities && displayData.risksAndOpportunities.opportunities.length > 0 ? (
+                        (displayData.risksAndOpportunities.opportunities as RiskOpportunity[]).map((opp, index) => (
                           <div key={index} className="mb-4">
                             <p className="text-sm text-foreground mb-2">
                               {opp.description}
