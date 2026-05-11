@@ -201,7 +201,7 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
   const negArticles = data.negativeArticles ?? []
   const negHeadlines: string[] = data.headlines?.negative ?? negArticles.map((a) => a.Title)
   if (negHeadlines.length > 0) {
-    out.push(sectionHeader("Negative Articles"))
+    out.push(sectionHeader("Negative Articles", COLORS.red))
     negHeadlines.slice(0, 12).forEach((h) => out.push(headlineBullet(h, COLORS.red)))
   }
 
@@ -222,23 +222,23 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
       general.slice(0, 12).forEach((a) => out.push(...articleBullet(a)))
     }
 
-    addSubSection(out, sr.museums,      "Museums")
-    addSubSection(out, sr.heritage,     "Heritage")
-    addSubSection(out, sr.visualArts,   "Visual Arts")
-    addSubSection(out, sr.film,         "Film")
-    addSubSection(out, sr.music,        "Music")
-    addSubSection(out, sr.fashion,      "Fashion")
-    addSubSection(out, sr.literature,   "Literature, Publishing and Translation")
-    addSubSection(out, sr.culinary,     "Culinary Arts")
-    addSubSection(out, sr.theater,      "Theater and Performing Arts")
-    addSubSection(out, sr.architecture, "Architecture and Design")
-    addSubSection(out, sr.libraries,    "Libraries")
+    addSubSection(out, sr.museums,      "Museums (المتاحف)")
+    addSubSection(out, sr.heritage,     "Heritage (التراث)")
+    addSubSection(out, sr.visualArts,   "Visual Arts (الفنون البصرية)")
+    addSubSection(out, sr.film,         "Film (الأفلام)")
+    addSubSection(out, sr.music,        "Music (الموسيقى)")
+    addSubSection(out, sr.fashion,      "Fashion (الأزياء)")
+    addSubSection(out, sr.literature,   "Literature, Publishing and Translation (الأدب والنشر والترجمة)")
+    addSubSection(out, sr.culinary,     "Culinary Arts (فنون الطهي)")
+    addSubSection(out, sr.theater,      "Theater and Performing Arts (المسرح والفنون الأدائية)")
+    addSubSection(out, sr.architecture, "Architecture and Design (العمارة والتصميم)")
+    addSubSection(out, sr.libraries,    "Libraries (المكتبات)")
   }
 
   // ── NEGATIVE ARTICLES (DETAILED) ────────────────────────────────────────────
-  out.push(sectionHeader("Negative Articles"))
+  out.push(sectionHeader("Negative Articles", COLORS.red))
   if (negArticles.length > 0) {
-    negArticles.forEach((a) => out.push(...articleBullet(a, COLORS.red)))
+    negArticles.forEach((a) => out.push(...articleBullet(a)))
   } else {
     out.push(new Paragraph({
       children: [new TextRun({ text: "No negative articles identified in this digest.", font: FONTS.body, size: SIZES.body, color: COLORS.grey, italics: true })],
@@ -254,21 +254,21 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
     const gl = data.global!
     const globalGeneral = gl.general ?? []
     if (globalGeneral.length > 0) {
-      out.push(subSectionHeader("General"))
+      out.push(subSectionHeader("General (عام)"))
       globalGeneral.slice(0, 12).forEach((a) => out.push(...articleBullet(a)))
     }
 
-    addSubSection(out, gl.museums,      "Museums")
-    addSubSection(out, gl.heritage,     "Heritage")
-    addSubSection(out, gl.visualArts,   "Visual Arts")
-    addSubSection(out, gl.film,         "Film")
-    addSubSection(out, gl.music,        "Music")
-    addSubSection(out, gl.fashion,      "Fashion")
-    addSubSection(out, gl.literature,   "Literature, Publishing and Translation")
-    addSubSection(out, gl.culinary,     "Culinary Arts")
-    addSubSection(out, gl.theater,      "Theater and Performing Arts")
-    addSubSection(out, gl.architecture, "Architecture and Design")
-    addSubSection(out, gl.libraries,    "Libraries")
+    addSubSection(out, gl.museums,      "Museums (المتاحف)")
+    addSubSection(out, gl.heritage,     "Heritage (التراث)")
+    addSubSection(out, gl.visualArts,   "Visual Arts (الفنون البصرية)")
+    addSubSection(out, gl.film,         "Film (الأفلام)")
+    addSubSection(out, gl.music,        "Music (الموسيقى)")
+    addSubSection(out, gl.fashion,      "Fashion (الأزياء)")
+    addSubSection(out, gl.literature,   "Literature, Publishing and Translation (الأدب والنشر والترجمة)")
+    addSubSection(out, gl.culinary,     "Culinary Arts (فنون الطهي)")
+    addSubSection(out, gl.theater,      "Theater and Performing Arts (المسرح والفنون الأدائية)")
+    addSubSection(out, gl.architecture, "Architecture and Design (العمارة والتصميم)")
+    addSubSection(out, gl.libraries,    "Libraries (المكتبات)")
   }
 
   // ── RISKS AND OPPORTUNITIES ─────────────────────────────────────────────────

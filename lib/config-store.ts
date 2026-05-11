@@ -426,8 +426,8 @@ export function normalizeConfig(config: Partial<SearchConfig> | null | undefined
       Array.isArray(source.summaryTags) ? source.summaryTags : defaultConfig.summaryTags
     ),
     scheduleTime1: source.scheduleTime1 || defaultConfig.scheduleTime1,
-    sectorArticleLimit: Number(source.sectorArticleLimit || defaultConfig.sectorArticleLimit),
-    globalArticleLimit: Number(source.globalArticleLimit || defaultConfig.globalArticleLimit),
+    sectorArticleLimit: Math.max(Number(source.sectorArticleLimit || defaultConfig.sectorArticleLimit), 12),
+    globalArticleLimit: Math.max(Number(source.globalArticleLimit || defaultConfig.globalArticleLimit), 12),
     searchRegion: source.searchRegion || defaultConfig.searchRegion,
     searchPages:
       Array.isArray(source.searchPages) && source.searchPages.length
@@ -535,8 +535,8 @@ export function buildDynamicDigestPrompt(config: SearchConfig): string {
   const base = config.searchPrompts.digest
   const keywords = getConfiguredKeywords(config)
   const outlets = getConfiguredOutlets(config)
-  const sectorLimit = config.sectorArticleLimit || 12
-  const globalLimit = config.globalArticleLimit || 12
+  const sectorLimit = Math.max(config.sectorArticleLimit || 12, 12)
+  const globalLimit = Math.max(config.globalArticleLimit || 12, 12)
 
   const additions: string[] = []
 
