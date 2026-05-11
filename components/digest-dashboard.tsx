@@ -32,7 +32,7 @@ import {
 } from "lucide-react"
 import { ExportDocxButton } from "@/components/export-docx-button"
 import type { DigestData, Article, SearchConfig } from "@/lib/types"
-import { buildSerperSearchBatches, loadConfig, loadDigestData, saveDigestData } from "@/lib/config-store"
+import { buildSerperSearchBatches, buildDynamicDigestPrompt, loadConfig, loadDigestData, saveDigestData } from "@/lib/config-store"
 
 function getSentimentBadge(sentiment?: string) {
   switch (sentiment) {
@@ -143,9 +143,50 @@ function transformDigestData(rawData: unknown): DigestData | null {
 
   const data = rawData as Record<string, unknown>
 
-  // If it's already in dashboard format (legacy), return as-is
+  // If already in dashboard format, ensure headlines are always populated
   if (data.saudiRegional || data.global) {
-    return data as unknown as DigestData
+    const result = data as unknown as DigestData
+    if (!result.headlines) {
+      const safeArr = (val: unknown): Article[] => (Array.isArray(val) ? (val as Article[]) : [])
+      const saudiHeadlines: string[] = []
+      const negativeHeadlines: string[] = []
+      const globalHeadlines: string[] = []
+      const negativeSet = new Set<string>()
+
+      ;(result.negativeArticles ?? []).forEach((a) => {
+        negativeHeadlines.push(a.Title)
+        negativeSet.add(a.Title)
+      })
+
+      Object.values(result.saudiRegional ?? {}).forEach((v) => {
+        safeArr(v).forEach((a) => {
+          if (a.sentiment === "negative" && !negativeSet.has(a.Title)) {
+            negativeHeadlines.push(a.Title)
+            negativeSet.add(a.Title)
+          } else if (a.sentiment !== "negative") {
+            saudiHeadlines.push(a.Title)
+          }
+        })
+      })
+
+      Object.values(result.global ?? {}).forEach((v) => {
+        safeArr(v).forEach((a) => {
+          if (a.sentiment === "negative" && !negativeSet.has(a.Title)) {
+            negativeHeadlines.push(a.Title)
+            negativeSet.add(a.Title)
+          } else if (a.sentiment !== "negative") {
+            globalHeadlines.push(a.Title)
+          }
+        })
+      })
+
+      result.headlines = {
+        saudiRegional: saudiHeadlines.slice(0, 12),
+        negative: negativeHeadlines.slice(0, 12),
+        global: globalHeadlines.slice(0, 12),
+      }
+    }
+    return result
   }
 
   const safeArr = (val: unknown): Article[] => (Array.isArray(val) ? (val as Article[]) : [])
@@ -267,9 +308,9 @@ function transformDigestData(rawData: unknown): DigestData | null {
   })
 
   result.headlines = {
-    saudiRegional: saudiHeadlines.slice(0, 10),
-    negative: negativeHeadlines.slice(0, 5),
-    global: globalHeadlines.slice(0, 10),
+    saudiRegional: saudiHeadlines.slice(0, 12),
+    negative: negativeHeadlines.slice(0, 12),
+    global: globalHeadlines.slice(0, 12),
   }
 
   return result
@@ -405,7 +446,7 @@ export function DigestDashboard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             articles: allArticles,
-            digestPrompt: config.searchPrompts.digest,
+            digestPrompt: buildDynamicDigestPrompt(config),
           }),
         })
         if (!processRes.ok) return
@@ -618,7 +659,7 @@ export function DigestDashboard() {
                       Saudi Arabia/Regional
                     </h4>
                     <ul className="space-y-1">
-                      {data.headlines.saudiRegional.slice(0, 5).map((headline, index) => (
+                      {data.headlines.saudiRegional.slice(0, 12).map((headline, index) => (
                         <li key={index} className="text-sm flex items-start gap-2">
                           <span className="text-[#0F2837]">•</span>
                           {headline}
@@ -646,7 +687,7 @@ export function DigestDashboard() {
                 <div>
                   <h4 className="font-semibold text-sm mb-2 text-[#0F2837]">Global</h4>
                   <ul className="space-y-1">
-                    {data.headlines.global.slice(0, 5).map((headline, index) => (
+                    {data.headlines.global.slice(0, 12).map((headline, index) => (
                       <li key={index} className="text-sm flex items-start gap-2">
                         <span className="text-[#0F2837]">•</span>
                         {headline}

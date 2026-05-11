@@ -5,14 +5,13 @@ import {
   TextRun,
   convertInchesToTwip,
   ExternalHyperlink,
-  BorderStyle,
 } from "docx"
 import type { DigestData, Article, RiskOpportunity } from "./types"
 
 export type { DigestData, Article, RiskOpportunity }
 
 const COLORS = {
-  blue: "1F5CA7",       // Section headers, subsection headers
+  blue: "5b8bdc",       // Section headers
   black: "000000",
   linkBlue: "467885",
   red: "C00000",        // Negative Articles + Risks header
@@ -24,9 +23,9 @@ const FONTS = { body: "Times New Roman" }
 
 const SIZES = {
   title: 40,           // 20pt – "Headlines, [date]"
-  section: 26,         // 13pt – section headers
-  subSection: 22,      // 11pt – subsection headers
-  body: 20,            // 10pt – body text
+  section: 24,         // 12pt – section headers
+  subSection: 24,      // 12pt – subsection headers
+  body: 24,            // 12pt – body text
 }
 
 const SPACING = {
@@ -67,29 +66,14 @@ function sectionHeader(text: string, color = COLORS.blue): Paragraph {
       new TextRun({ text, bold: true, font: FONTS.body, size: SIZES.section, color }),
     ],
     spacing: { before: 280, after: SPACING.afterSection },
-    border: {
-      bottom: { color, space: 1, style: BorderStyle.SINGLE, size: 6 },
-    },
   })
 }
 
-function subSectionHeader(text: string, arabicText?: string, color = COLORS.black): Paragraph {
-  const children: TextRun[] = [
-    new TextRun({ text, bold: true, font: FONTS.body, size: SIZES.subSection, color }),
-  ]
-  if (arabicText) {
-    children.push(
-      new TextRun({
-        text: ` (${arabicText})`,
-        bold: true,
-        font: FONTS.body,
-        size: SIZES.subSection,
-        color,
-      })
-    )
-  }
+function subSectionHeader(text: string, color = COLORS.black): Paragraph {
   return new Paragraph({
-    children,
+    children: [
+      new TextRun({ text, bold: true, font: FONTS.body, size: SIZES.subSection, color }),
+    ],
     spacing: { before: 160, after: SPACING.afterSubSection },
   })
 }
@@ -192,12 +176,11 @@ function addSubSection(
   out: Paragraph[],
   articles: Article[] | undefined,
   label: string,
-  arabic?: string,
-  limit = 2
+  limit = 12
 ) {
   const list = articles?.slice(0, limit) ?? []
   if (list.length === 0) return
-  out.push(subSectionHeader(label, arabic))
+  out.push(subSectionHeader(label))
   list.forEach((a) => out.push(...articleBullet(a)))
 }
 
@@ -209,26 +192,23 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
   out.push(title(dateStr))
 
   // ── HEADLINES PAGE ─────────────────────────────────────────────────────────
-  // Saudi Arabia/Regional
   const saudiHeadlines: string[] = data.headlines?.saudiRegional ?? collectTitles(data.saudiRegional)
   if (saudiHeadlines.length > 0) {
     out.push(sectionHeader("Saudi Arabia/Regional"))
-    saudiHeadlines.forEach((h) => out.push(headlineBullet(h)))
+    saudiHeadlines.slice(0, 12).forEach((h) => out.push(headlineBullet(h)))
   }
 
-  // Negative Articles
   const negArticles = data.negativeArticles ?? []
   const negHeadlines: string[] = data.headlines?.negative ?? negArticles.map((a) => a.Title)
   if (negHeadlines.length > 0) {
     out.push(sectionHeader("Negative Articles", COLORS.red))
-    negHeadlines.forEach((h) => out.push(headlineBullet(h)))
+    negHeadlines.slice(0, 12).forEach((h) => out.push(headlineBullet(h)))
   }
 
-  // Global
   const globalHeadlines: string[] = data.headlines?.global ?? collectTitles(data.global)
   if (globalHeadlines.length > 0) {
     out.push(sectionHeader("Global"))
-    globalHeadlines.forEach((h) => out.push(headlineBullet(h)))
+    globalHeadlines.slice(0, 12).forEach((h) => out.push(headlineBullet(h)))
   }
 
   // ── SAUDI ARABIA/REGIONAL (DETAILED) ────────────────────────────────────────
@@ -242,17 +222,17 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
       general.slice(0, 12).forEach((a) => out.push(...articleBullet(a)))
     }
 
-    addSubSection(out, sr.museums,      "Museums",                             "المتاحف")
-    addSubSection(out, sr.heritage,     "Heritage",                            "التراث")
-    addSubSection(out, sr.visualArts,   "Visual Arts",                         "الفنون البصرية")
-    addSubSection(out, sr.film,         "Film",                                "الأفلام")
-    addSubSection(out, sr.music,        "Music",                               "الموسيقى")
-    addSubSection(out, sr.fashion,      "Fashion",                             "الأزياء")
-    addSubSection(out, sr.literature,   "Literature, Publishing and Translation","الأدب والنشر والترجمة")
-    addSubSection(out, sr.culinary,     "Culinary Arts",                       "فنون الطهي")
-    addSubSection(out, sr.theater,      "Theater and Performing Arts",         "المسرح والفنون الأدائية")
-    addSubSection(out, sr.architecture, "Architecture and Design",             "العمارة والتصميم")
-    addSubSection(out, sr.libraries,    "Libraries",                           "المكتبات")
+    addSubSection(out, sr.museums,      "Museums")
+    addSubSection(out, sr.heritage,     "Heritage")
+    addSubSection(out, sr.visualArts,   "Visual Arts")
+    addSubSection(out, sr.film,         "Film")
+    addSubSection(out, sr.music,        "Music")
+    addSubSection(out, sr.fashion,      "Fashion")
+    addSubSection(out, sr.literature,   "Literature, Publishing and Translation")
+    addSubSection(out, sr.culinary,     "Culinary Arts")
+    addSubSection(out, sr.theater,      "Theater and Performing Arts")
+    addSubSection(out, sr.architecture, "Architecture and Design")
+    addSubSection(out, sr.libraries,    "Libraries")
   }
 
   // ── NEGATIVE ARTICLES (DETAILED) ────────────────────────────────────────────
@@ -268,21 +248,21 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
     const gl = data.global!
     const globalGeneral = gl.general ?? []
     if (globalGeneral.length > 0) {
-      out.push(subSectionHeader("General", "عام"))
+      out.push(subSectionHeader("General"))
       globalGeneral.slice(0, 12).forEach((a) => out.push(...articleBullet(a)))
     }
 
-    addSubSection(out, gl.museums,      "Museums",                             "المتاحف")
-    addSubSection(out, gl.heritage,     "Heritage",                            "التراث")
-    addSubSection(out, gl.visualArts,   "Visual Arts",                         "الفنون البصرية")
-    addSubSection(out, gl.film,         "Film",                                "الأفلام")
-    addSubSection(out, gl.music,        "Music",                               "الموسيقى")
-    addSubSection(out, gl.fashion,      "Fashion",                             "الأزياء")
-    addSubSection(out, gl.literature,   "Literature, Publishing and Translation","الأدب والنشر والترجمة")
-    addSubSection(out, gl.culinary,     "Culinary Arts",                       "فنون الطهي")
-    addSubSection(out, gl.theater,      "Theater and Performing Arts",         "المسرح والفنون الأدائية")
-    addSubSection(out, gl.architecture, "Architecture and Design",             "العمارة والتصميم")
-    addSubSection(out, gl.libraries,    "Libraries",                           "المكتبات")
+    addSubSection(out, gl.museums,      "Museums")
+    addSubSection(out, gl.heritage,     "Heritage")
+    addSubSection(out, gl.visualArts,   "Visual Arts")
+    addSubSection(out, gl.film,         "Film")
+    addSubSection(out, gl.music,        "Music")
+    addSubSection(out, gl.fashion,      "Fashion")
+    addSubSection(out, gl.literature,   "Literature, Publishing and Translation")
+    addSubSection(out, gl.culinary,     "Culinary Arts")
+    addSubSection(out, gl.theater,      "Theater and Performing Arts")
+    addSubSection(out, gl.architecture, "Architecture and Design")
+    addSubSection(out, gl.libraries,    "Libraries")
   }
 
   // ── RISKS AND OPPORTUNITIES ─────────────────────────────────────────────────
@@ -290,12 +270,12 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
     out.push(sectionHeader("Risks and Opportunities"))
 
     if (data.risksAndOpportunities.risks?.length) {
-      out.push(subSectionHeader("Risks", undefined, COLORS.red))
+      out.push(subSectionHeader("Risks", COLORS.red))
       data.risksAndOpportunities.risks.forEach((r) => out.push(...riskOpportunityItem(r)))
     }
 
     if (data.risksAndOpportunities.opportunities?.length) {
-      out.push(subSectionHeader("Opportunities", undefined, COLORS.orange))
+      out.push(subSectionHeader("Opportunities", COLORS.orange))
       data.risksAndOpportunities.opportunities.forEach((o) => out.push(...riskOpportunityItem(o)))
     }
   }

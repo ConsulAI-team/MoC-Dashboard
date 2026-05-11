@@ -56,7 +56,7 @@ For both "Saudi Arabia / Regional" and "Global", use these exact subsections:
 - Music
 - Culinary Arts
 
-Maximum: 2 articles per subsection. Only include subsections that have relevant articles.
+Maximum: 12 articles per subsection. Only include subsections that have relevant articles.
 
 ---
 
@@ -86,7 +86,8 @@ Editorial Rules
 - English only — translate all non-English content
 - Prioritize Tier 1 international and cultural outlets
 - Prefer original reporting over aggregators
-- Only include articles from the past 24 hours`
+- Only include articles from the past 24 hours
+- EXCLUDE all articles originally written in Arabic or sourced from Arabic-language outlets (e.g. Sabq, Okaz, Al-Riyadh, Asharq Al-Awsat Arabic edition, Arab News Arabic section, local Saudi Arabic press). Only include content from English-language international or regional news sources`
 
 const DEFAULT_SUMMARY_INSTRUCTIONS =
   "Write concise executive summaries for Ministry of Culture leadership. Focus on strategic implications, reputational risk, opportunities, and the cultural position of Saudi Arabia."
@@ -251,7 +252,7 @@ export const defaultConfig: SearchConfig = {
   writingStyle: DEFAULT_SUMMARY_INSTRUCTIONS,
   summaryTags: ["Strategic implications", "Risks", "Opportunities"],
   scheduleTime1: "08:00",
-  sectorArticleLimit: 2,
+  sectorArticleLimit: 12,
   globalArticleLimit: 12,
   searchRegion: "sa",
   searchPages: [1, 2, 3],
@@ -517,4 +518,26 @@ export function clearStoredData(): void {
     localStorage.removeItem(CONFIG_STORAGE_KEY)
     localStorage.removeItem(DATA_STORAGE_KEY)
   }
+}
+
+export function buildDynamicDigestPrompt(config: SearchConfig): string {
+  const base = config.searchPrompts.digest
+  const keywords = getConfiguredKeywords(config)
+  const outlets = getConfiguredOutlets(config)
+
+  const additions: string[] = []
+
+  if (keywords.length > 0) {
+    additions.push(
+      `\nSearch Keywords (articles were retrieved using these terms — use them to improve categorisation and relevance scoring): ${keywords.join(", ")}`
+    )
+  }
+
+  if (outlets.length > 0) {
+    additions.push(
+      `\nPreferred Outlets (prioritise articles from these outlets when available, and use them as the primary source filter): ${outlets.join(", ")}`
+    )
+  }
+
+  return additions.length > 0 ? base + "\n\n---\n\nDynamic Configuration" + additions.join("\n") : base
 }

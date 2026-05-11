@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { serverRead, serverWrite } from '@/lib/server-store'
-import { buildSerperSearchBatches, normalizeConfig } from '@/lib/config-store'
+import { buildDynamicDigestPrompt, buildSerperSearchBatches, normalizeConfig } from '@/lib/config-store'
 import { searchSerperBatch } from '@/lib/serper-api'
 import { processArticles } from '@/lib/process-articles'
 import type { SearchConfig } from '@/lib/types'
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Search returned no articles' }, { status: 400 })
     }
 
-    const digestData = await processArticles(allArticles, config.searchPrompts.digest)
+    const digestData = await processArticles(allArticles, buildDynamicDigestPrompt(config))
 
     serverWrite('digest', digestData)
     serverWrite('cron-state', { lastRunAt: new Date().toISOString() })
