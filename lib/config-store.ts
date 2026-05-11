@@ -16,6 +16,17 @@ LANGUAGE REQUIREMENT: ALL output text — every Title, Snippet, description, con
 
 ---
 
+ARABIC & LOCAL OUTLET EXCLUSION — MANDATORY
+
+Do NOT include any article that:
+- Is originally written in Arabic
+- Is sourced from an Arabic-language outlet (e.g. Sabq, Okaz, Al-Riyadh, Ajel, Aleqtisadiah, Asharq Al-Awsat Arabic edition, Al-Watan, Al-Madina, Arab News Arabic content, local Saudi Arabic press, any Gulf Arabic-language newspaper or website)
+- Is a direct translation of an Arabic-language source
+
+Only include articles from English-language international, regional, or global news sources. If you are unsure whether a source is Arabic-language, exclude it. This rule has no exceptions.
+
+---
+
 Client
 
 The client is the Ministry of Culture (MOC), Saudi Arabia.
@@ -87,7 +98,7 @@ Editorial Rules
 - Prioritize Tier 1 international and cultural outlets
 - Prefer original reporting over aggregators
 - Only include articles from the past 24 hours
-- EXCLUDE all articles originally written in Arabic or sourced from Arabic-language outlets (e.g. Sabq, Okaz, Al-Riyadh, Asharq Al-Awsat Arabic edition, Arab News Arabic section, local Saudi Arabic press). Only include content from English-language international or regional news sources`
+- Arabic/local outlet exclusion: strictly enforced — see mandatory rule above`
 
 const DEFAULT_SUMMARY_INSTRUCTIONS =
   "Write concise executive summaries for Ministry of Culture leadership. Focus on strategic implications, reputational risk, opportunities, and the cultural position of Saudi Arabia."
@@ -524,8 +535,19 @@ export function buildDynamicDigestPrompt(config: SearchConfig): string {
   const base = config.searchPrompts.digest
   const keywords = getConfiguredKeywords(config)
   const outlets = getConfiguredOutlets(config)
+  const sectorLimit = config.sectorArticleLimit || 12
+  const globalLimit = config.globalArticleLimit || 12
 
   const additions: string[] = []
+
+  // Always inject hard overrides so cached old prompts cannot override these rules
+  additions.push(
+    `\nARTICLE LIMITS (override any limits stated above): Return up to ${sectorLimit} articles per subsection. Return up to ${globalLimit} articles for General sections. Targets: Saudi Arabia/Regional up to ${sectorLimit * 12} articles total, Negative Articles up to ${sectorLimit} articles, Global up to ${sectorLimit * 12} articles total.`
+  )
+
+  additions.push(
+    `\nARABIC/LOCAL OUTLET EXCLUSION (mandatory, overrides any prior instruction): COMPLETELY EXCLUDE all articles from Arabic-language outlets or originally written in Arabic. This includes but is not limited to: Sabq, Okaz, Al-Riyadh, Ajel, Aleqtisadiah, Asharq Al-Awsat (Arabic), Al-Watan, Al-Madina, Arab News (Arabic content), and any Gulf/Saudi Arabic-language press. Only English-language international sources are permitted.`
+  )
 
   if (keywords.length > 0) {
     additions.push(
@@ -539,5 +561,5 @@ export function buildDynamicDigestPrompt(config: SearchConfig): string {
     )
   }
 
-  return additions.length > 0 ? base + "\n\n---\n\nDynamic Configuration" + additions.join("\n") : base
+  return base + "\n\n---\n\nDynamic Configuration\n" + additions.join("\n")
 }

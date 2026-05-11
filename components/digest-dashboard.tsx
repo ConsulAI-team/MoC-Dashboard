@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -186,6 +186,11 @@ function transformDigestData(rawData: unknown): DigestData | null {
         global: globalHeadlines.slice(0, 12),
       }
     }
+    // Always ensure these sections exist so the UI can render them
+    if (!result.negativeArticles) result.negativeArticles = []
+    if (!result.risksAndOpportunities) result.risksAndOpportunities = { risks: [], opportunities: [] }
+    if (!result.risksAndOpportunities.risks) result.risksAndOpportunities.risks = []
+    if (!result.risksAndOpportunities.opportunities) result.risksAndOpportunities.opportunities = []
     return result
   }
 
@@ -314,6 +319,48 @@ function transformDigestData(rawData: unknown): DigestData | null {
   }
 
   return result
+}
+
+// Apply excludedSources and excludedTerms from config to filter display articles
+function applyConfigFilters(data: DigestData, config: SearchConfig | null): DigestData {
+  if (!config) return data
+
+  const excludedSourceSet = new Set(
+    config.excludedSources.map((s) => s.value.toLowerCase().trim()).filter(Boolean)
+  )
+  const excludedTermsList = config.excludedTerms
+    .map((t) => t.value.toLowerCase().trim())
+    .filter(Boolean)
+
+  if (excludedSourceSet.size === 0 && excludedTermsList.length === 0) return data
+
+  const keep = (article: Article): boolean => {
+    const outlet = (article.Outlet ?? "").toLowerCase().trim()
+    if (outlet && excludedSourceSet.has(outlet)) return false
+    if (excludedTermsList.length > 0) {
+      const text = `${article.Title} ${article.Snippet}`.toLowerCase()
+      if (excludedTermsList.some((term) => text.includes(term))) return false
+    }
+    return true
+  }
+
+  const filterMap = (
+    section: Record<string, Article[] | undefined> | undefined
+  ): Record<string, Article[] | undefined> | undefined => {
+    if (!section) return section
+    const out: Record<string, Article[] | undefined> = {}
+    for (const [key, arr] of Object.entries(section)) {
+      out[key] = Array.isArray(arr) ? arr.filter(keep) : arr
+    }
+    return out
+  }
+
+  return {
+    ...data,
+    saudiRegional: filterMap(data.saudiRegional) as DigestData["saudiRegional"],
+    negativeArticles: data.negativeArticles?.filter(keep),
+    global: filterMap(data.global) as DigestData["global"],
+  }
 }
 
 // Create empty digest data structure
@@ -533,60 +580,66 @@ export function DigestDashboard() {
     ),
   }
 
+  // Derive display data: apply excluded-sources / excluded-terms filters from config
+  const displayData = useMemo(
+    () => (data && config ? applyConfigFilters(data, config) : data),
+    [data, config]
+  )
+
   // Calculate stats
-  const saudiCount = data?.saudiRegional
+  const saudiCount = displayData?.saudiRegional
     ? [
         visibleSections.saudiGeneral ? data.saudiRegional.general : [],
         visibleSections.museums ? data.saudiRegional.museums : [],
         visibleSections.heritage ? data.saudiRegional.heritage : [],
         visibleSections.visualArts ? data.saudiRegional.visualArts : [],
-        visibleSections.film ? data.saudiRegional.film : [],
-        visibleSections.music ? data.saudiRegional.music : [],
-        visibleSections.fashion ? data.saudiRegional.fashion : [],
-        visibleSections.literature ? data.saudiRegional.literature : [],
-        visibleSections.culinary ? data.saudiRegional.culinary : [],
-        visibleSections.theater ? data.saudiRegional.theater : [],
-        visibleSections.architecture ? data.saudiRegional.architecture : [],
-        visibleSections.libraries ? data.saudiRegional.libraries : [],
+        visibleSections.film ? displayData.saudiRegional.film : [],
+        visibleSections.music ? displayData.saudiRegional.music : [],
+        visibleSections.fashion ? displayData.saudiRegional.fashion : [],
+        visibleSections.literature ? displayData.saudiRegional.literature : [],
+        visibleSections.culinary ? displayData.saudiRegional.culinary : [],
+        visibleSections.theater ? displayData.saudiRegional.theater : [],
+        visibleSections.architecture ? displayData.saudiRegional.architecture : [],
+        visibleSections.libraries ? displayData.saudiRegional.libraries : [],
       ].reduce((acc, arr) => acc + (arr?.length || 0), 0)
     : 0
   const negativeLinks = new Set<string>()
-  ;(Array.isArray(data?.negativeArticles) ? data.negativeArticles : []).forEach((a) =>
+  ;(Array.isArray(displayData?.negativeArticles) ? displayData.negativeArticles : []).forEach((a) =>
     negativeLinks.add(a.Link || a.Title)
   )
-  ;[...Object.values(data?.saudiRegional ?? {}), ...Object.values(data?.global ?? {})]
+  ;[...Object.values(displayData?.saudiRegional ?? {}), ...Object.values(displayData?.global ?? {})]
     .flat()
     .filter((a): a is Article => !!a && (a as Article).sentiment === "negative")
     .forEach((a) => negativeLinks.add(a.Link || a.Title))
   const negativeCount = negativeLinks.size
-  const globalCount = data?.global
+  const globalCount = displayData?.global
     ? [
-        visibleSections.globalGeneral ? data.global.general : [],
-        visibleSections.museums ? data.global.museums : [],
-        visibleSections.heritage ? data.global.heritage : [],
-        visibleSections.visualArts ? data.global.visualArts : [],
-        visibleSections.film ? data.global.film : [],
-        visibleSections.music ? data.global.music : [],
-        visibleSections.fashion ? data.global.fashion : [],
-        visibleSections.literature ? data.global.literature : [],
-        visibleSections.culinary ? data.global.culinary : [],
-        visibleSections.theater ? data.global.theater : [],
-        visibleSections.architecture ? data.global.architecture : [],
-        visibleSections.libraries ? data.global.libraries : [],
+        visibleSections.globalGeneral ? displayData.global.general : [],
+        visibleSections.museums ? displayData.global.museums : [],
+        visibleSections.heritage ? displayData.global.heritage : [],
+        visibleSections.visualArts ? displayData.global.visualArts : [],
+        visibleSections.film ? displayData.global.film : [],
+        visibleSections.music ? displayData.global.music : [],
+        visibleSections.fashion ? displayData.global.fashion : [],
+        visibleSections.literature ? displayData.global.literature : [],
+        visibleSections.culinary ? displayData.global.culinary : [],
+        visibleSections.theater ? displayData.global.theater : [],
+        visibleSections.architecture ? displayData.global.architecture : [],
+        visibleSections.libraries ? displayData.global.libraries : [],
       ].reduce((acc, arr) => acc + (arr?.length || 0), 0)
     : 0
-  const positiveCount = data
+  const positiveCount = displayData
     ? [
-        ...Object.values(data.saudiRegional ?? {}),
-        ...Object.values(data.global ?? {}),
+        ...Object.values(displayData.saudiRegional ?? {}),
+        ...Object.values(displayData.global ?? {}),
       ]
         .flat()
         .filter((a): a is Article => !!a && (a as Article).sentiment === "positive")
         .length
     : 0
-  const risksCount = data?.risksAndOpportunities?.risks?.length || 0
-  const opportunitiesCount = data?.risksAndOpportunities?.opportunities?.length || 0
-  const totalCount = saudiCount + (Array.isArray(data?.negativeArticles) ? data.negativeArticles.length : 0) + globalCount
+  const risksCount = displayData?.risksAndOpportunities?.risks?.length || 0
+  const opportunitiesCount = displayData?.risksAndOpportunities?.opportunities?.length || 0
+  const totalCount = saudiCount + (Array.isArray(displayData?.negativeArticles) ? displayData.negativeArticles.length : 0) + globalCount
 
   return (
     <div className="min-h-screen bg-background">
@@ -608,7 +661,7 @@ export function DigestDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {data && <ExportDocxButton data={data} />}
+              {displayData && <ExportDocxButton data={displayData} />}
               <Link href="/config">
                 <Button variant="outline" size="icon">
                   <Settings className="h-5 w-5" />
@@ -643,7 +696,7 @@ export function DigestDashboard() {
         )}
 
         {/* Headlines Summary */}
-        {data?.headlines && hasData && (
+        {displayData?.headlines && hasData && (
           <Card className="mb-8 border-[#0F2837]/20 bg-[#0F2837]/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-[#0F2837]">
@@ -652,14 +705,14 @@ export function DigestDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {data.headlines.saudiRegional &&
-                data.headlines.saudiRegional.length > 0 && (
+              {displayData.headlines.saudiRegional &&
+                displayData.headlines.saudiRegional.length > 0 && (
                   <div>
                     <h4 className="font-semibold text-sm mb-2 text-[#0F2837]">
                       Saudi Arabia/Regional
                     </h4>
                     <ul className="space-y-1">
-                      {data.headlines.saudiRegional.slice(0, 12).map((headline, index) => (
+                      {displayData.headlines.saudiRegional.slice(0, 12).map((headline, index) => (
                         <li key={index} className="text-sm flex items-start gap-2">
                           <span className="text-[#0F2837]">•</span>
                           {headline}
@@ -668,13 +721,13 @@ export function DigestDashboard() {
                     </ul>
                   </div>
                 )}
-              {data.headlines.negative && data.headlines.negative.length > 0 && (
+              {displayData.headlines.negative && displayData.headlines.negative.length > 0 && (
                 <div>
                   <h4 className="font-semibold text-sm mb-2 text-red-600">
                     Negative Articles
                   </h4>
                   <ul className="space-y-1">
-                    {data.headlines.negative.map((headline, index) => (
+                    {displayData.headlines.negative.map((headline, index) => (
                       <li key={index} className="text-sm flex items-start gap-2">
                         <span className="text-red-600">•</span>
                         {headline}
@@ -683,11 +736,11 @@ export function DigestDashboard() {
                   </ul>
                 </div>
               )}
-              {data.headlines.global && data.headlines.global.length > 0 && (
+              {displayData.headlines.global && displayData.headlines.global.length > 0 && (
                 <div>
                   <h4 className="font-semibold text-sm mb-2 text-[#0F2837]">Global</h4>
                   <ul className="space-y-1">
-                    {data.headlines.global.slice(0, 12).map((headline, index) => (
+                    {displayData.headlines.global.slice(0, 12).map((headline, index) => (
                       <li key={index} className="text-sm flex items-start gap-2">
                         <span className="text-[#0F2837]">•</span>
                         {headline}
@@ -696,10 +749,10 @@ export function DigestDashboard() {
                   </ul>
                 </div>
               )}
-              {(!data.headlines.saudiRegional ||
-                data.headlines.saudiRegional.length === 0) &&
-                (!data.headlines.negative || data.headlines.negative.length === 0) &&
-                (!data.headlines.global || data.headlines.global.length === 0) && (
+              {(!displayData.headlines.saudiRegional ||
+                displayData.headlines.saudiRegional.length === 0) &&
+                (!displayData.headlines.negative || displayData.headlines.negative.length === 0) &&
+                (!displayData.headlines.global || displayData.headlines.global.length === 0) && (
                   <p className="text-sm text-muted-foreground">
                     No headlines available. Run a search to populate the digest.
                   </p>
@@ -826,22 +879,26 @@ export function DigestDashboard() {
                 </Card>
               )}
 
-              {/* Negative Articles */}
-              {data?.negativeArticles && data.negativeArticles.length > 0 && (
-                <Card className="border-red-200">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-red-600">
-                      <AlertTriangle className="h-5 w-5" />
-                      Negative Articles
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {data.negativeArticles.map((article, index) => (
+              {/* Negative Articles — always shown */}
+              <Card className="border-red-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-600">
+                    <AlertTriangle className="h-5 w-5" />
+                    Negative Articles
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {data?.negativeArticles && data.negativeArticles.length > 0 ? (
+                    data.negativeArticles.map((article, index) => (
                       <ArticleCard key={index} article={article} />
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No negative articles identified in this digest.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Global Section */}
               {data?.global && (
@@ -959,10 +1016,9 @@ export function DigestDashboard() {
               )}
             </div>
 
-            {/* Sidebar - Risks & Opportunities */}
+            {/* Sidebar - Risks & Opportunities — always shown */}
             <div className="space-y-6">
-              {data?.risksAndOpportunities && (
-                <Card>
+              <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Lightbulb className="h-5 w-5 text-[#0F2837]" />
@@ -970,81 +1026,73 @@ export function DigestDashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {data.risksAndOpportunities.risks &&
-                      data.risksAndOpportunities.risks.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold text-sm text-red-600 uppercase tracking-wide mb-3">
-                            Risks
-                          </h4>
-                          {data.risksAndOpportunities.risks.map((risk, index) => (
-                            <div key={index} className="mb-4">
-                              <p className="text-sm text-foreground mb-2">
-                                {risk.description}
+                    <div>
+                      <h4 className="font-semibold text-sm text-red-600 uppercase tracking-wide mb-3">
+                        Risks
+                      </h4>
+                      {data?.risksAndOpportunities?.risks && data.risksAndOpportunities.risks.length > 0 ? (
+                        data.risksAndOpportunities.risks.map((risk, index) => (
+                          <div key={index} className="mb-4">
+                            <p className="text-sm text-foreground mb-2">
+                              {risk.description}
+                            </p>
+                            {risk.source && (
+                              <p className="text-xs text-muted-foreground italic mb-1">
+                                Source:{" "}
+                                {risk.link ? (
+                                  <a href={risk.link} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                                    {risk.source}
+                                  </a>
+                                ) : risk.source}
                               </p>
-                              {risk.source && (
-                                <p className="text-xs text-muted-foreground italic mb-1">
-                                  Source:{" "}
-                                  {risk.link ? (
-                                    <a href={risk.link} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
-                                      {risk.source}
-                                    </a>
-                                  ) : risk.source}
-                                </p>
-                              )}
-                              {risk.consideration && (
-                                <p className="text-xs text-foreground">
-                                  <span className="font-semibold">Consideration:</span>{" "}
-                                  <span className="italic">{risk.consideration}</span>
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                    {data.risksAndOpportunities.opportunities &&
-                      data.risksAndOpportunities.opportunities.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold text-sm text-green-600 uppercase tracking-wide mb-3">
-                            Opportunities
-                          </h4>
-                          {data.risksAndOpportunities.opportunities.map((opp, index) => (
-                            <div key={index} className="mb-4">
-                              <p className="text-sm text-foreground mb-2">
-                                {opp.description}
+                            )}
+                            {risk.consideration && (
+                              <p className="text-xs text-foreground">
+                                <span className="font-semibold">Consideration:</span>{" "}
+                                <span className="italic">{risk.consideration}</span>
                               </p>
-                              {opp.source && (
-                                <p className="text-xs text-muted-foreground italic mb-1">
-                                  Source:{" "}
-                                  {opp.link ? (
-                                    <a href={opp.link} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
-                                      {opp.source}
-                                    </a>
-                                  ) : opp.source}
-                                </p>
-                              )}
-                              {opp.consideration && (
-                                <p className="text-xs text-foreground">
-                                  <span className="font-semibold">Consideration:</span>{" "}
-                                  <span className="italic">{opp.consideration}</span>
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No risks identified in this digest.</p>
                       )}
+                    </div>
 
-                    {(!data.risksAndOpportunities.risks ||
-                      data.risksAndOpportunities.risks.length === 0) &&
-                      (!data.risksAndOpportunities.opportunities ||
-                        data.risksAndOpportunities.opportunities.length === 0) && (
-                        <p className="text-sm text-muted-foreground">
-                          No risks or opportunities identified yet.
-                        </p>
+                    <div>
+                      <h4 className="font-semibold text-sm text-green-600 uppercase tracking-wide mb-3">
+                        Opportunities
+                      </h4>
+                      {data?.risksAndOpportunities?.opportunities && data.risksAndOpportunities.opportunities.length > 0 ? (
+                        data.risksAndOpportunities.opportunities.map((opp, index) => (
+                          <div key={index} className="mb-4">
+                            <p className="text-sm text-foreground mb-2">
+                              {opp.description}
+                            </p>
+                            {opp.source && (
+                              <p className="text-xs text-muted-foreground italic mb-1">
+                                Source:{" "}
+                                {opp.link ? (
+                                  <a href={opp.link} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                                    {opp.source}
+                                  </a>
+                                ) : opp.source}
+                              </p>
+                            )}
+                            {opp.consideration && (
+                              <p className="text-xs text-foreground">
+                                <span className="font-semibold">Consideration:</span>{" "}
+                                <span className="italic">{opp.consideration}</span>
+                              </p>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No opportunities identified in this digest.</p>
                       )}
+                    </div>
                   </CardContent>
                 </Card>
-              )}
 
               {/* Quick Stats */}
               <Card>

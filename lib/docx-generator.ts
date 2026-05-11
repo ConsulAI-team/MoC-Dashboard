@@ -22,7 +22,7 @@ const COLORS = {
 const FONTS = { body: "Times New Roman" }
 
 const SIZES = {
-  title: 40,           // 20pt – "Headlines, [date]"
+  title: 24,           // 12pt – "Headlines, [date]"
   section: 24,         // 12pt – section headers
   subSection: 24,      // 12pt – subsection headers
   body: 24,            // 12pt – body text
@@ -236,9 +236,15 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
   }
 
   // ── NEGATIVE ARTICLES (DETAILED) ────────────────────────────────────────────
+  out.push(sectionHeader("Negative Articles"))
   if (negArticles.length > 0) {
-    out.push(sectionHeader("Negative Articles"))
     negArticles.forEach((a) => out.push(...articleBullet(a, COLORS.red)))
+  } else {
+    out.push(new Paragraph({
+      children: [new TextRun({ text: "No negative articles identified in this digest.", font: FONTS.body, size: SIZES.body, color: COLORS.grey, italics: true })],
+      indent: { left: convertInchesToTwip(0.25) },
+      spacing: { after: SPACING.betweenArticles },
+    }))
   }
 
   // ── GLOBAL (DETAILED) ───────────────────────────────────────────────────────
@@ -266,18 +272,28 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
   }
 
   // ── RISKS AND OPPORTUNITIES ─────────────────────────────────────────────────
-  if (data.risksAndOpportunities) {
-    out.push(sectionHeader("Risks and Opportunities"))
+  out.push(sectionHeader("Risks and Opportunities"))
 
-    if (data.risksAndOpportunities.risks?.length) {
-      out.push(subSectionHeader("Risks", COLORS.red))
-      data.risksAndOpportunities.risks.forEach((r) => out.push(...riskOpportunityItem(r)))
-    }
+  out.push(subSectionHeader("Risks", COLORS.red))
+  if (data.risksAndOpportunities?.risks?.length) {
+    data.risksAndOpportunities.risks.forEach((r) => out.push(...riskOpportunityItem(r)))
+  } else {
+    out.push(new Paragraph({
+      children: [new TextRun({ text: "No risks identified in this digest.", font: FONTS.body, size: SIZES.body, color: COLORS.grey, italics: true })],
+      indent: { left: convertInchesToTwip(0.25) },
+      spacing: { after: SPACING.betweenArticles },
+    }))
+  }
 
-    if (data.risksAndOpportunities.opportunities?.length) {
-      out.push(subSectionHeader("Opportunities", COLORS.orange))
-      data.risksAndOpportunities.opportunities.forEach((o) => out.push(...riskOpportunityItem(o)))
-    }
+  out.push(subSectionHeader("Opportunities", COLORS.orange))
+  if (data.risksAndOpportunities?.opportunities?.length) {
+    data.risksAndOpportunities.opportunities.forEach((o) => out.push(...riskOpportunityItem(o)))
+  } else {
+    out.push(new Paragraph({
+      children: [new TextRun({ text: "No opportunities identified in this digest.", font: FONTS.body, size: SIZES.body, color: COLORS.grey, italics: true })],
+      indent: { left: convertInchesToTwip(0.25) },
+      spacing: { after: SPACING.betweenArticles },
+    }))
   }
 
   // ── BUILD DOCUMENT ──────────────────────────────────────────────────────────
