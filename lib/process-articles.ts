@@ -1,6 +1,6 @@
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini'
-export const MAX_ARTICLES = 300
+export const MAX_ARTICLES = 80
 
 export interface RawArticle {
   title: string
