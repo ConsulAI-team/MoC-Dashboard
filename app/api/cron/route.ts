@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { serverRead, serverWrite } from '@/lib/server-store'
+
+export const maxDuration = 300
 import { buildDynamicDigestPrompt, buildSerperSearchBatches, normalizeConfig } from '@/lib/config-store'
 import { searchSerperBatch } from '@/lib/serper-api'
 import { processArticles } from '@/lib/process-articles'
