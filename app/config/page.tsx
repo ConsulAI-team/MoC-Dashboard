@@ -27,6 +27,12 @@ import {
   saveConfig,
   saveDigestData,
 } from "@/lib/config-store"
+import {
+  loadConfigFromSupabase,
+  saveConfigToSupabase,
+  saveDigestDataToSupabase,
+  updateLastRunTime,
+} from "@/lib/supabase-store"
 import type { ExcludedItem, SearchConfig } from "@/lib/types"
 
 type ItemField = "outlets" | "excludedTerms" | "excludedSources"
@@ -62,9 +68,20 @@ export default function SearchConfigPage() {
   })
 
   useEffect(() => {
-    const savedConfig = loadConfig()
-    setConfig(savedConfig)
-    setIsLoading(false)
+    const loadData = async () => {
+      try {
+        // Try Supabase first, fallback to localStorage
+        const supabaseConfig = await loadConfigFromSupabase()
+        setConfig(supabaseConfig)
+      } catch {
+        // Fallback to localStorage
+        const savedConfig = loadConfig()
+        setConfig(savedConfig)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
   }, [])
 
   const updateInput = (key: InputKey, value: string) => {
@@ -114,13 +131,16 @@ export default function SearchConfigPage() {
   const handleSave = async () => {
     setIsSaving(true)
     const normalized = { ...config, writingStyle: config.summaryInstructions }
+    
+    // Save to localStorage for backward compatibility
     saveConfig(normalized)
-    // Sync to server so the background cron can read it
-    fetch('/api/config-sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(normalized),
-    }).catch(() => { /* best-effort */ })
+    
+    // Save to Supabase for persistence across users
+    try {
+      await saveConfigToSupabase(normalized)
+    } catch (error) {
+      console.error('Failed to save to Supabase:', error)
+    }
 
     setTimeout(() => {
       setIsSaving(false)
@@ -191,8 +211,18 @@ export default function SearchConfigPage() {
       if (!digestData) throw new Error('No digest data returned from processing step.')
 
       // Replace old data and navigate to dashboard
+      // Save to localStorage for backward compatibility
       saveDigestData(digestData)
       localStorage.setItem('moc-last-run-at', new Date().toISOString())
+      
+      // Save to Supabase for persistence across users
+      try {
+        await saveDigestDataToSupabase(digestData)
+        await updateLastRunTime()
+      } catch (error) {
+        console.error('Failed to save to Supabase:', error)
+      }
+      
       router.push("/")
     } catch (error) {
       console.error('Run failed:', error)

@@ -5,8 +5,8 @@
   "devCommand": "pnpm dev",
   "crons": [
     {
-      "path": "/api/cron",
-      "schedule": "*/5 * * * *"
+      "path": "/api/cron/update-digest",
+      "schedule": "0 5 * * *"
     }
   ]
 }

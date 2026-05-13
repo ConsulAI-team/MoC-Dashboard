@@ -14,14 +14,21 @@ import {
 import { ExportDocxButton } from "@/components/export-docx-button"
 import {
   AlertTriangle,
+  Clock,
   ExternalLink,
   Globe,
   Loader2,
   Newspaper,
+  RefreshCw,
   Settings,
   TrendingUp,
 } from "lucide-react"
 import { loadDigestData } from "@/lib/config-store"
+import {
+  loadDigestDataFromSupabase,
+  getScheduleInfo,
+  subscribeToDigestUpdates,
+} from "@/lib/supabase-store"
 import type { Article, DigestData, RiskOpportunity } from "@/lib/types"
 
 function ArticleCard({ article, variant = "default" }: { article: Article; variant?: "default" | "negative" }) {
@@ -155,13 +162,57 @@ export function DigestDashboard() {
   const router = useRouter()
   const [digestData, setDigestData] = useState<DigestData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRunAt, setLastRunAt] = useState<string | null>(null)
+  const [scheduledTime, setScheduledTime] = useState<string>("08:00")
+  const [error, setError] = useState<string | null>(null)
+
+  const loadData = async (showRefreshState = false) => {
+    if (showRefreshState) setIsRefreshing(true)
+    setError(null)
+    
+    try {
+      // Try to load from Supabase first
+      const [supabaseData, scheduleInfo] = await Promise.all([
+        loadDigestDataFromSupabase(),
+        getScheduleInfo()
+      ])
+      
+      if (supabaseData) {
+        setDigestData(supabaseData)
+        setLastRunAt(scheduleInfo.lastRunAt)
+        setScheduledTime(scheduleInfo.scheduledTime)
+      } else {
+        // Fallback to localStorage for backward compatibility
+        const localData = loadDigestData() as DigestData | null
+        setDigestData(localData)
+        setLastRunAt(localStorage.getItem("moc-last-run-at"))
+      }
+    } catch (err) {
+      console.error("Failed to load digest data:", err)
+      setError("Failed to load data from server. Showing cached data if available.")
+      // Fallback to localStorage on error
+      const localData = loadDigestData() as DigestData | null
+      setDigestData(localData)
+      setLastRunAt(localStorage.getItem("moc-last-run-at"))
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }
 
   useEffect(() => {
-    const data = loadDigestData() as DigestData | null
-    setDigestData(data)
-    setLastRunAt(localStorage.getItem("moc-last-run-at"))
-    setIsLoading(false)
+    loadData()
+
+    // Subscribe to real-time updates from Supabase
+    const unsubscribe = subscribeToDigestUpdates((newData) => {
+      setDigestData(newData)
+      setLastRunAt(new Date().toISOString())
+    })
+
+    return () => {
+      unsubscribe()
+    }
   }, [])
 
   if (isLoading) {
@@ -186,15 +237,33 @@ export function DigestDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">MoC Daily Cultural Digest</h1>
-              <p className="text-sm text-muted-foreground">
-                {digestData?.generatedAt
-                  ? `Generated: ${new Date(digestData.generatedAt).toLocaleString()}`
-                  : lastRunAt
-                  ? `Last run: ${new Date(lastRunAt).toLocaleString()}`
-                  : "No digest generated yet"}
-              </p>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span>
+                  {digestData?.generatedAt
+                    ? `Generated: ${new Date(digestData.generatedAt).toLocaleString()}`
+                    : lastRunAt
+                    ? `Last run: ${new Date(lastRunAt).toLocaleString()}`
+                    : "No digest generated yet"}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Daily update: {scheduledTime}
+                </span>
+              </div>
+              {error && (
+                <p className="text-xs text-destructive mt-1">{error}</p>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadData(true)}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
               {hasData && digestData && (
                 <ExportDocxButton data={digestData} />
               )}
