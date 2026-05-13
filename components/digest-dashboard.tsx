@@ -28,6 +28,7 @@ import {
   loadDigestDataFromSupabase,
   getScheduleInfo,
   subscribeToDigestUpdates,
+  isSupabaseConfigured,
 } from "@/lib/supabase-store"
 import type { Article, DigestData, RiskOpportunity } from "@/lib/types"
 
@@ -172,18 +173,25 @@ export function DigestDashboard() {
     setError(null)
     
     try {
-      // Try to load from Supabase first
-      const [supabaseData, scheduleInfo] = await Promise.all([
-        loadDigestDataFromSupabase(),
-        getScheduleInfo()
-      ])
-      
-      if (supabaseData) {
-        setDigestData(supabaseData)
-        setLastRunAt(scheduleInfo.lastRunAt)
-        setScheduledTime(scheduleInfo.scheduledTime)
+      // Only try Supabase if it's configured
+      if (isSupabaseConfigured()) {
+        const [supabaseData, scheduleInfo] = await Promise.all([
+          loadDigestDataFromSupabase(),
+          getScheduleInfo()
+        ])
+        
+        if (supabaseData) {
+          setDigestData(supabaseData)
+          setLastRunAt(scheduleInfo.lastRunAt)
+          setScheduledTime(scheduleInfo.scheduledTime)
+        } else {
+          // No data in Supabase yet, fallback to localStorage
+          const localData = loadDigestData() as DigestData | null
+          setDigestData(localData)
+          setLastRunAt(localStorage.getItem("moc-last-run-at"))
+        }
       } else {
-        // Fallback to localStorage for backward compatibility
+        // Supabase not configured, use localStorage
         const localData = loadDigestData() as DigestData | null
         setDigestData(localData)
         setLastRunAt(localStorage.getItem("moc-last-run-at"))
@@ -204,14 +212,17 @@ export function DigestDashboard() {
   useEffect(() => {
     loadData()
 
-    // Subscribe to real-time updates from Supabase
-    const unsubscribe = subscribeToDigestUpdates((newData) => {
-      setDigestData(newData)
-      setLastRunAt(new Date().toISOString())
-    })
+    // Subscribe to real-time updates from Supabase (only if configured)
+    let unsubscribe: (() => void) | undefined
+    if (isSupabaseConfigured()) {
+      unsubscribe = subscribeToDigestUpdates((newData) => {
+        setDigestData(newData)
+        setLastRunAt(new Date().toISOString())
+      })
+    }
 
     return () => {
-      unsubscribe()
+      if (unsubscribe) unsubscribe()
     }
   }, [])
 

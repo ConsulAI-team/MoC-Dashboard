@@ -7,12 +7,23 @@ const CONFIG_TABLE = 'digest_config'
 const DATA_TABLE = 'digest_data'
 const SCHEDULE_TABLE = 'digest_schedule'
 
+// Check if Supabase is configured
+export function isSupabaseConfigured(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )
+}
+
 // Create a singleton Supabase client for browser-side operations
 let supabaseClient: ReturnType<typeof createClient> | null = null
 
 function getSupabaseClient() {
   if (typeof window === 'undefined') {
     throw new Error('Supabase client can only be used in the browser')
+  }
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase is not configured. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.')
   }
   if (!supabaseClient) {
     supabaseClient = createClient()

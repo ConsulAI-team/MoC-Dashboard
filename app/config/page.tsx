@@ -32,6 +32,7 @@ import {
   saveConfigToSupabase,
   saveDigestDataToSupabase,
   updateLastRunTime,
+  isSupabaseConfigured,
 } from "@/lib/supabase-store"
 import type { ExcludedItem, SearchConfig } from "@/lib/types"
 
@@ -70,9 +71,14 @@ export default function SearchConfigPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Try Supabase first, fallback to localStorage
-        const supabaseConfig = await loadConfigFromSupabase()
-        setConfig(supabaseConfig)
+        // Only try Supabase if configured, otherwise use localStorage
+        if (isSupabaseConfigured()) {
+          const supabaseConfig = await loadConfigFromSupabase()
+          setConfig(supabaseConfig)
+        } else {
+          const savedConfig = loadConfig()
+          setConfig(savedConfig)
+        }
       } catch {
         // Fallback to localStorage
         const savedConfig = loadConfig()
@@ -135,11 +141,13 @@ export default function SearchConfigPage() {
     // Save to localStorage for backward compatibility
     saveConfig(normalized)
     
-    // Save to Supabase for persistence across users
-    try {
-      await saveConfigToSupabase(normalized)
-    } catch (error) {
-      console.error('Failed to save to Supabase:', error)
+    // Save to Supabase for persistence across users (only if configured)
+    if (isSupabaseConfigured()) {
+      try {
+        await saveConfigToSupabase(normalized)
+      } catch (error) {
+        console.error('Failed to save to Supabase:', error)
+      }
     }
 
     setTimeout(() => {
@@ -215,12 +223,14 @@ export default function SearchConfigPage() {
       saveDigestData(digestData)
       localStorage.setItem('moc-last-run-at', new Date().toISOString())
       
-      // Save to Supabase for persistence across users
-      try {
-        await saveDigestDataToSupabase(digestData)
-        await updateLastRunTime()
-      } catch (error) {
-        console.error('Failed to save to Supabase:', error)
+      // Save to Supabase for persistence across users (only if configured)
+      if (isSupabaseConfigured()) {
+        try {
+          await saveDigestDataToSupabase(digestData)
+          await updateLastRunTime()
+        } catch (error) {
+          console.error('Failed to save to Supabase:', error)
+        }
       }
       
       router.push("/")
