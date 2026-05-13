@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,7 +19,6 @@ import {
   Loader2,
   Newspaper,
   RefreshCw,
-  Settings,
   TrendingUp,
 } from "lucide-react"
 import { loadDigestData } from "@/lib/config-store"
@@ -31,6 +29,8 @@ import {
   isSupabaseConfigured,
 } from "@/lib/supabase-store"
 import type { Article, DigestData, RiskOpportunity } from "@/lib/types"
+
+const MAX_ARTICLES_PER_SECTION = 12
 
 function ArticleCard({ article, variant = "default" }: { article: Article; variant?: "default" | "negative" }) {
   const isNegative = variant === "negative"
@@ -77,6 +77,7 @@ function ArticleSection({
   icon?: typeof Newspaper
 }) {
   if (!articles || articles.length === 0) return null
+  const displayArticles = articles.slice(0, MAX_ARTICLES_PER_SECTION)
   
   return (
     <AccordionItem value={title} className="border-none">
@@ -85,13 +86,13 @@ function ArticleSection({
           {Icon && <Icon className={`h-4 w-4 ${variant === "negative" ? "text-destructive" : "text-muted-foreground"}`} />}
           <span className={variant === "negative" ? "text-destructive" : ""}>{title}</span>
           <Badge variant={variant === "negative" ? "destructive" : "secondary"} className="ml-2">
-            {articles.length}
+            {displayArticles.length}
           </Badge>
         </div>
       </AccordionTrigger>
       <AccordionContent>
         <div className="space-y-3 pl-6">
-          {articles.map((article, index) => (
+          {displayArticles.map((article, index) => (
             <ArticleCard key={`${article.Link}-${index}`} article={article} variant={variant} />
           ))}
         </div>
@@ -160,7 +161,6 @@ function RiskOpportunityCard({ item, type }: { item: RiskOpportunity; type: "ris
 }
 
 export function DigestDashboard() {
-  const router = useRouter()
   const [digestData, setDigestData] = useState<DigestData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -278,13 +278,6 @@ export function DigestDashboard() {
               {hasData && digestData && (
                 <ExportDocxButton data={digestData} />
               )}
-              <Button
-                variant="outline"
-                onClick={() => router.push("/config")}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Configure
-              </Button>
             </div>
           </div>
         </div>
@@ -296,13 +289,9 @@ export function DigestDashboard() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Newspaper className="h-12 w-12 text-muted-foreground mb-4" />
               <h2 className="text-xl font-semibold text-foreground mb-2">No Digest Available</h2>
-              <p className="text-muted-foreground text-center max-w-md mb-4">
-                Configure your search keywords and run a search to generate your first cultural digest.
+              <p className="text-muted-foreground text-center max-w-md">
+                The daily digest will be generated automatically at 8:00 AM. Click Refresh to check for updates.
               </p>
-              <Button onClick={() => router.push("/config")}>
-                <Settings className="h-4 w-4 mr-2" />
-                Configure Search
-              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -348,14 +337,14 @@ export function DigestDashboard() {
                   <AlertTriangle className="h-5 w-5" />
                   Negative Articles
                   {digestData?.negativeArticles && digestData.negativeArticles.length > 0 && (
-                    <Badge variant="destructive">{digestData.negativeArticles.length}</Badge>
+                    <Badge variant="destructive">{Math.min(digestData.negativeArticles.length, MAX_ARTICLES_PER_SECTION)}</Badge>
                   )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {digestData?.negativeArticles && digestData.negativeArticles.length > 0 ? (
                   <div className="space-y-3">
-                    {digestData.negativeArticles.map((article, index) => (
+                    {digestData.negativeArticles.slice(0, MAX_ARTICLES_PER_SECTION).map((article, index) => (
                       <ArticleCard key={`neg-${article.Link}-${index}`} article={article} variant="negative" />
                     ))}
                   </div>

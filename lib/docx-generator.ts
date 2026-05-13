@@ -88,16 +88,25 @@ function headlineBullet(text: string, color = COLORS.black): Paragraph {
   })
 }
 
-function articleBullet(article: Article, textColor = COLORS.black): Paragraph[] {
-  const text = article.Snippet || article.Title
-  const children: (TextRun | ExternalHyperlink)[] = [
-    new TextRun({ text: `• ${text}`, font: FONTS.body, size: SIZES.body, color: textColor }),
+function articleBullet(article: Article, isNegative = false): Paragraph[] {
+  const paragraphs: Paragraph[] = []
+  
+  // Headline (bold, red for negative articles)
+  const headlineChildren: (TextRun | ExternalHyperlink)[] = [
+    new TextRun({ 
+      text: `• ${article.Title}`, 
+      font: FONTS.body, 
+      size: SIZES.body, 
+      color: isNegative ? COLORS.red : COLORS.black,
+      bold: true,
+    }),
   ]
-
+  
+  // Add outlet link after headline
   if (article.Outlet) {
-    children.push(new TextRun({ text: " (", font: FONTS.body, size: SIZES.body, color: textColor }))
+    headlineChildren.push(new TextRun({ text: " (", font: FONTS.body, size: SIZES.body, color: COLORS.black }))
     if (article.Link) {
-      children.push(
+      headlineChildren.push(
         new ExternalHyperlink({
           children: [
             new TextRun({
@@ -105,27 +114,42 @@ function articleBullet(article: Article, textColor = COLORS.black): Paragraph[] 
               font: FONTS.body,
               size: SIZES.body,
               color: COLORS.linkBlue,
-              underline: {},
             }),
           ],
           link: article.Link,
         })
       )
     } else {
-      children.push(
-        new TextRun({ text: article.Outlet, font: FONTS.body, size: SIZES.body, color: COLORS.linkBlue, italics: true })
+      headlineChildren.push(
+        new TextRun({ text: article.Outlet, font: FONTS.body, size: SIZES.body, color: COLORS.linkBlue })
       )
     }
-    children.push(new TextRun({ text: ")", font: FONTS.body, size: SIZES.body, color: textColor }))
+    headlineChildren.push(new TextRun({ text: ")", font: FONTS.body, size: SIZES.body, color: COLORS.black }))
+  }
+  
+  paragraphs.push(new Paragraph({
+    children: headlineChildren,
+    indent: { left: convertInchesToTwip(0.25) },
+    spacing: { after: 40 },
+  }))
+  
+  // Snippet/brief (black text, indented below headline)
+  if (article.Snippet) {
+    paragraphs.push(new Paragraph({
+      children: [
+        new TextRun({ 
+          text: article.Snippet, 
+          font: FONTS.body, 
+          size: SIZES.body, 
+          color: COLORS.black,
+        }),
+      ],
+      indent: { left: convertInchesToTwip(0.5) },
+      spacing: { after: SPACING.betweenArticles },
+    }))
   }
 
-  return [
-    new Paragraph({
-      children,
-      indent: { left: convertInchesToTwip(0.25) },
-      spacing: { after: SPACING.betweenArticles },
-    }),
-  ]
+  return paragraphs
 }
 
 function riskOpportunityItem(item: RiskOpportunity): Paragraph[] {
@@ -134,8 +158,9 @@ function riskOpportunityItem(item: RiskOpportunity): Paragraph[] {
   paragraphs.push(
     new Paragraph({
       children: [
-        new TextRun({ text: item.description, font: FONTS.body, size: SIZES.body, color: COLORS.black }),
+        new TextRun({ text: `• ${item.description}`, font: FONTS.body, size: SIZES.body, color: COLORS.black }),
       ],
+      indent: { left: convertInchesToTwip(0.25) },
       spacing: { after: 80 },
     })
   )
@@ -147,14 +172,14 @@ function riskOpportunityItem(item: RiskOpportunity): Paragraph[] {
     if (item.link) {
       sourceChildren.push(
         new ExternalHyperlink({
-          children: [new TextRun({ text: item.source, font: FONTS.body, size: SIZES.body, color: COLORS.linkBlue, underline: {} })],
+          children: [new TextRun({ text: item.source, font: FONTS.body, size: SIZES.body, color: COLORS.linkBlue })],
           link: item.link,
         })
       )
     } else {
       sourceChildren.push(new TextRun({ text: item.source, font: FONTS.body, size: SIZES.body, color: COLORS.grey }))
     }
-    paragraphs.push(new Paragraph({ children: sourceChildren, spacing: { after: 80 } }))
+    paragraphs.push(new Paragraph({ children: sourceChildren, indent: { left: convertInchesToTwip(0.5) }, spacing: { after: 80 } }))
   }
 
   if (item.consideration) {
@@ -164,6 +189,7 @@ function riskOpportunityItem(item: RiskOpportunity): Paragraph[] {
           new TextRun({ text: "Consideration: ", bold: true, font: FONTS.body, size: SIZES.body, color: COLORS.black }),
           new TextRun({ text: item.consideration, font: FONTS.body, size: SIZES.body, color: COLORS.black, italics: true }),
         ],
+        indent: { left: convertInchesToTwip(0.5) },
         spacing: { after: SPACING.betweenArticles },
       })
     )
@@ -176,12 +202,13 @@ function addSubSection(
   out: Paragraph[],
   articles: Article[] | undefined,
   label: string,
-  limit = 12
+  limit = 12,
+  isNegative = false
 ) {
   const list = articles?.slice(0, limit) ?? []
   if (list.length === 0) return
   out.push(subSectionHeader(label))
-  list.forEach((a) => out.push(...articleBullet(a)))
+  list.forEach((a) => out.push(...articleBullet(a, isNegative)))
 }
 
 export async function generateDocx(data: DigestData): Promise<Blob> {
@@ -238,7 +265,7 @@ export async function generateDocx(data: DigestData): Promise<Blob> {
   // ── NEGATIVE ARTICLES (DETAILED) ────────────────────────────────────────────
   out.push(sectionHeader("Negative Articles", COLORS.red))
   if (negArticles.length > 0) {
-    negArticles.forEach((a) => out.push(...articleBullet(a)))
+    negArticles.slice(0, 12).forEach((a) => out.push(...articleBullet(a, true)))
   } else {
     out.push(new Paragraph({
       children: [new TextRun({ text: "No negative articles identified in this digest.", font: FONTS.body, size: SIZES.body, color: COLORS.grey, italics: true })],
